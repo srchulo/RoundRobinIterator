@@ -56,7 +56,7 @@ for (String letter : roundRobinKeyValueIterator) {
     System.out.println(letter);
     
     if (!removedA) {
-        roundRobinKeyValueIterator.remove(1);
+        roundRobinKeyValueIterator.remove(/* key= */ 1);
         removedA = true;
     }
 }
