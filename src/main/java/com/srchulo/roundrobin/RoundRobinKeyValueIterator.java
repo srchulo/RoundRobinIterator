@@ -6,7 +6,7 @@ import javafx.util.Pair;
 
 /**
  * An {@link Iterator} that returns values associated with keys in Round-Robin order. Items can be added and removed in
- * O(1) constant time.
+ * O(1) constant time. This {@link Iterator} will loop continuously.
  */
 public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
     /**
