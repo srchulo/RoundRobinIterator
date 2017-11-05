@@ -29,8 +29,8 @@ public interface RoundRobinIterator<T> extends Iterator<T> {
 
     /**
      * Removes value from the {@link Iterator}. This operation is performed in O(1) constant time. It is safe to call
-     * this method while iterating. If this value would have been returned by {@link #next()}, the value after it will
-     * now be returned.
+     * this method while iterating. If this value would have been returned by {@link #next()} on the next call, the
+     * value after it will now be returned.
      */
     void remove(T value);
 
