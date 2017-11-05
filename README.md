@@ -1,6 +1,8 @@
 # RoundRobinIterator
 A Round-Robin Iterator that traverses values in Round-Robin order, and can add and remove values in constant time.
 
+<p><a href="http://srchulo.com/java/roundrobin/">Javadoc</a></p>
+
 ## RoundRobinIterator
 
 ```java
