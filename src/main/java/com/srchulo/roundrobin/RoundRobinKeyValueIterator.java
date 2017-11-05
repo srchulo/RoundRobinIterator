@@ -26,7 +26,7 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
     /**
      * Adds this key-value pair to the iterator. The key-value pair will be placed after the last value retrieved from
      * {@link #next()}, and thus will be returned the next time {@link #next()} is called. This operation is performed
-     * in O(1) constant time.
+     * in O(1) constant time. If no values have been added, this value is first.
      */
     void add(K key, V value);
 

@@ -24,6 +24,7 @@ public interface RoundRobinIterator<T> extends Iterator<T> {
     /**
      * Adds a value to the iterator. The value will be placed after the last value retrieved from {@link #next()}, and
      * thus will be returned the next time {@link #next()} is called. This operation is performed in O(1) constant time.
+     * If no values have been added, this value is first.
      */
     void add(T value);
 
