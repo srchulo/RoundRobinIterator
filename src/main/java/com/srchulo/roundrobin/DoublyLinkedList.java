@@ -1,5 +1,6 @@
 package com.srchulo.roundrobin;
 
+import com.google.common.base.Preconditions;
 import javax.annotation.Nullable;
 
 /**
@@ -61,6 +62,8 @@ final class DoublyLinkedList<K, V> {
     }
 
     Node addAfter(K key, V value, Node node) {
+        Preconditions.checkNotNull(node, "node cannot be null");
+
         if (node == tail) {
             return add(key, value);
         }
