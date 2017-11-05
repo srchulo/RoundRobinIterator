@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /**
- * An {@link Iterator} that returns values in a Round-Robin order. Items can be added and removed in O(1) constant time.
+ * An {@link Iterator} that returns values in Round-Robin order. Items can be added and removed in O(1) constant time.
  */
 public interface RoundRobinIterator<T> extends Iterator<T> {
     /**
