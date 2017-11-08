@@ -13,6 +13,8 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     private final Map<K, DoublyLinkedList<K, V>.Node> keyToNode = new HashMap<>();
 
     @Nullable private DoublyLinkedList<K, V>.Node lastNode;
+    @Nullable private DoublyLinkedList<K, V>.Node loopNode;
+    private boolean loopStarted;
     private boolean canCallRemove;
 
     RoundRobinKeyValueIteratorImpl() {
@@ -39,13 +41,57 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
         DoublyLinkedList<K, V>.Node node = keyToNode.remove(key);
         maybeUpdateLastNodeForRemoval(node);
+        maybeUpdateLoopNodeForRemoval(node);
         doublyLinkedList.remove(node);
+
+        if (isEmpty()) {
+            loopNode = null;
+        }
     }
 
     private void maybeUpdateLastNodeForRemoval(DoublyLinkedList<K, V>.Node node) {
         if (node == lastNode) {
             lastNode = doublyLinkedList.getPreviousNode(lastNode);
         }
+    }
+
+    private void maybeUpdateLoopNodeForRemoval(DoublyLinkedList<K, V>.Node node) {
+        if (node == loopNode) {
+            loopNode = doublyLinkedList.getPreviousNodeOrTail(loopNode);
+            maybeClearLoopNode();
+        }
+    }
+
+    @Override
+    public void startLoop() {
+        Preconditions
+                .checkState(!loopStarted, "current loop must be ended by calling endLoop before calling startLoop");
+        loopStarted = true;
+
+        if (isEmpty()) {
+            return;
+        }
+
+        loopNode = lastNode == null ? doublyLinkedList.getTail() : lastNode;
+    }
+
+    @Override
+    public boolean inLoop() {
+        Preconditions.checkState(loopStarted, "startLoop must be called before calling inLoop");
+
+        if (loopNode == null) {
+            loopStarted = false;
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public void endLoop() {
+        Preconditions.checkState(loopStarted, "startLoop must be called before calling endLoop");
+        loopStarted = false;
+        loopNode = null;
     }
 
     @Override
@@ -67,9 +113,22 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     public V next() {
         Preconditions.checkState(hasNext(), "hasNext() must be true before calling next()");
 
-        lastNode = lastNode == null ? doublyLinkedList.getFirst() : doublyLinkedList.getNextNodeOrFirst(lastNode);
+        lastNode = getNextNode();
+        maybeClearLoopNode();
         canCallRemove = true;
         return lastNode.getValue();
+    }
+
+    private DoublyLinkedList<K, V>.Node getNextNode() {
+        return lastNode == null ? doublyLinkedList.getHead() : doublyLinkedList.getNextNodeOrHead(lastNode);
+    }
+
+    private void maybeClearLoopNode() {
+        // We do not call endLoop because we don't want loopStarted to be false. This way the user should be able to
+        // call inLoop one more time.
+        if (lastNode == loopNode) {
+            loopNode = null;
+        }
     }
 
     @Override

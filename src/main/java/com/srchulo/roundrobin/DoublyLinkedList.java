@@ -79,7 +79,15 @@ final class DoublyLinkedList<K, V> {
         return node.prev;
     }
 
-    Node getNextNodeOrFirst(Node node) {
+    Node getPreviousNodeOrTail(Node node) {
+        if (node == head) {
+            return tail;
+        }
+
+        return node.prev;
+    }
+
+    Node getNextNodeOrHead(Node node) {
         if (node == tail) {
             return head;
         }
@@ -87,12 +95,20 @@ final class DoublyLinkedList<K, V> {
         return node.next;
     }
 
-    Node getFirst() {
+    Node getHead() {
         if (isEmpty()) {
             throw new IllegalStateException("DoublyLinkedList is empty");
         }
 
         return head;
+    }
+
+    Node getTail() {
+        if (isEmpty()) {
+            throw new IllegalStateException("DoublyLinkedList is empty");
+        }
+
+        return tail;
     }
 
     void remove(Node node) {

@@ -27,6 +27,21 @@ final class RoundRobinIteratorImpl<T> implements RoundRobinIterator<T> {
     }
 
     @Override
+    public void startLoop() {
+        roundRobinKeyValueIterator.startLoop();
+    }
+
+    @Override
+    public boolean inLoop() {
+        return roundRobinKeyValueIterator.inLoop();
+    }
+
+    @Override
+    public void endLoop() {
+        roundRobinKeyValueIterator.endLoop();
+    }
+
+    @Override
     public int size() {
         return roundRobinKeyValueIterator.size();
     }
