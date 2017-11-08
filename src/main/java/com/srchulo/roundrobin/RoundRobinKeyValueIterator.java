@@ -41,12 +41,14 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      * Starts a loop where you can do one iteration over each element in the iterator starting from the last
      * element returned by {@link #next()}. You can check to see if you are in the loop by calling {@link #inLoop()}.
      *
+     * <pre>
      * <code>
      *     roundRobinKeyValueIterator.startLoop();
      *     while (roundRobinKeyValueIterator.hasNext() && roundRobinKeyValueIterator.inLoop()) {
      *         System.out.println("In loop " + roundRobinKeyValueIterator.next());
      *     }
      * </code>
+     * </pre>
      *
      * If any elements are removed from the {@link Iterator} while in a loop, the loop will still stop at the correct
      * place, even if the element removed is the element where the loop started. If this is the case, the element will
