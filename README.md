@@ -7,11 +7,11 @@ A Round-Robin Iterator that traverses values in Round-Robin order, and can add a
 
 ### Maven
 
-        <dependency>
-            <groupId>com.srchulo.roundrobin</groupId>
-            <artifactId>RoundRobinIterator</artifactId>
-            <version>1.0</version>
-        </dependency>
+    <dependency>
+        <groupId>com.srchulo.roundrobin</groupId>
+        <artifactId>RoundRobinIterator</artifactId>
+        <version>1.0</version>
+    </dependency>
 
 ### Sample usage
 
