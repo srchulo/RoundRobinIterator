@@ -28,7 +28,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     @Override
     public void add(K key, V value) {
         Preconditions.checkState(
-                !keyToNode.containsKey(key), "key '" + key + "' already exists. Cannot add value '" + value + "'");
+                !containsKey(key), "key '" + key + "' already exists. Cannot add value '" + value + "'");
 
         DoublyLinkedList<K, V>.Node node =
                 lastNode == null ? doublyLinkedList.add(key, value) : doublyLinkedList.addAfter(key, value, lastNode);
@@ -37,7 +37,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Override
     public void remove(K key) {
-        Preconditions.checkArgument(keyToNode.containsKey(key), "key '" + key + "' does not exist for any node");
+        checkContainsKey(key);
 
         DoublyLinkedList<K, V>.Node node = keyToNode.remove(key);
         maybeUpdateLastNodeForRemoval(node);
@@ -47,6 +47,21 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         if (isEmpty()) {
             loopNode = null;
         }
+    }
+
+    @Override
+    public boolean containsKey(K key) {
+        return keyToNode.containsKey(key);
+    }
+
+    @Override
+    public V get(K key) {
+        checkContainsKey(key);
+        return keyToNode.get(key).getValue();
+    }
+
+    private void checkContainsKey(K key) {
+        Preconditions.checkArgument(containsKey(key), "key '" + key + "' does not exist for any node");
     }
 
     private void maybeUpdateLastNodeForRemoval(DoublyLinkedList<K, V>.Node node) {

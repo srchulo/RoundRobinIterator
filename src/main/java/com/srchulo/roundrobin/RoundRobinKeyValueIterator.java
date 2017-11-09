@@ -37,6 +37,15 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      */
     void remove(K key);
 
+    /** Returns {@code true} if this {@link RoundRobinKeyValueIterator} contains a value for this key. */
+    boolean containsKey(K key);
+
+    /**
+     * Returns the value associated with this key.
+     * @throws IllegalArgumentException if this key does not exist.
+     */
+    V get(K key);
+
     /**
      * Starts a loop where you can do one iteration over each element in the iterator starting from the last
      * element returned by {@link #next()}. You can check to see if you are in the loop by calling {@link #inLoop()}.
