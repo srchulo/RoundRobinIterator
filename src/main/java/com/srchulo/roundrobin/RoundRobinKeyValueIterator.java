@@ -34,8 +34,9 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      * Removes the value associated with key from the {@link Iterator}. This operation is performed in O(1) constant
      * time. It is safe to call this method while iterating. If this value would have been returned by {@link #next()}
      * on the next call, the value after it will now be returned.
+     * @return the value associated with key.
      */
-    void remove(K key);
+    V remove(K key);
 
     /** Returns {@code true} if this {@link RoundRobinKeyValueIterator} contains a value for this key. */
     boolean containsKey(K key);

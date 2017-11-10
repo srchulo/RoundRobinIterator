@@ -36,7 +36,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     }
 
     @Override
-    public void remove(K key) {
+    public V remove(K key) {
         checkContainsKey(key);
 
         DoublyLinkedList<K, V>.Node node = keyToNode.remove(key);
@@ -47,6 +47,8 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         if (isEmpty()) {
             loopNode = null;
         }
+
+        return node.getValue();
     }
 
     @Override
