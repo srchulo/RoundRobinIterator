@@ -14,8 +14,14 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Nullable private DoublyLinkedList<K, V>.Node lastNode;
     @Nullable private DoublyLinkedList<K, V>.Node loopNode;
-    private boolean loopStarted;
+    private LoopState loopState = LoopState.NOT_STARTED;
     private boolean canCallRemove;
+
+    private enum LoopState {
+        NOT_STARTED,
+        STARTED,
+        ENDED,
+    }
 
     RoundRobinKeyValueIteratorImpl() {
         this(ImmutableList.of());
@@ -27,6 +33,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Override
     public void add(K key, V value) {
+        Preconditions.checkState(loopState != LoopState.STARTED, "cannot call add while in a loop");
         Preconditions.checkState(
                 !containsKey(key), "key '" + key + "' already exists. Cannot add value '" + value + "'");
 
@@ -37,17 +44,23 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Override
     public V remove(K key) {
+        Preconditions.checkState(loopState != LoopState.STARTED, "cannot call remove(key) while in a loop");
+        return removeWithoutLoopStateCheck(key);
+    }
+
+    private V removeWithoutLoopStateCheck(K key) {
         checkContainsKey(key);
 
         DoublyLinkedList<K, V>.Node node = keyToNode.remove(key);
-        maybeUpdateLastNodeForRemoval(node);
-        maybeUpdateLoopNodeForRemoval(node);
-        doublyLinkedList.remove(node);
-
-        if (isEmpty()) {
+        if (size() == 1) {
+            lastNode = null;
             loopNode = null;
+        } else {
+            maybeUpdateLastNodeForRemoval(node);
+            maybeUpdateLoopNodeForRemoval(node);
         }
 
+        doublyLinkedList.remove(node);
         return node.getValue();
     }
 
@@ -68,46 +81,56 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     private void maybeUpdateLastNodeForRemoval(DoublyLinkedList<K, V>.Node node) {
         if (node == lastNode) {
-            lastNode = doublyLinkedList.getPreviousNode(lastNode);
+            lastNode = doublyLinkedList.getPreviousNodeOrTail(lastNode);
         }
     }
 
     private void maybeUpdateLoopNodeForRemoval(DoublyLinkedList<K, V>.Node node) {
         if (node == loopNode) {
             loopNode = doublyLinkedList.getPreviousNodeOrTail(loopNode);
-            maybeClearLoopNode();
         }
     }
 
     @Override
     public void startLoop() {
         Preconditions
-                .checkState(!loopStarted, "current loop must be ended by calling endLoop before calling startLoop");
-        loopStarted = true;
+                .checkState(
+                        loopState == LoopState.NOT_STARTED || loopState == LoopState.ENDED,
+                        "current loop must be ended by calling endLoop before calling startLoop");
+        loopState = LoopState.STARTED;
 
         if (isEmpty()) {
             return;
         }
 
-        loopNode = lastNode == null ? doublyLinkedList.getTail() : lastNode;
+        // if lastNode is not set, the loop will never end
+        if (lastNode == null) {
+            lastNode = doublyLinkedList.getTail();
+        }
+        loopNode = lastNode;
     }
 
     @Override
     public boolean inLoop() {
-        Preconditions.checkState(loopStarted, "startLoop must be called before calling inLoop");
-
-        if (loopNode == null) {
-            loopStarted = false;
+        Preconditions.checkState(
+                loopState == LoopState.STARTED || loopState == LoopState.ENDED,
+                "must be in a loop or have just ended a loop by calling endLoop to call inLoop");
+        if (!inLoopWithNoLoopStateCheck()) {
+            loopState = LoopState.NOT_STARTED;
             return false;
         }
 
         return true;
     }
 
+    private boolean inLoopWithNoLoopStateCheck() {
+        return loopNode != null;
+    }
+
     @Override
     public void endLoop() {
-        Preconditions.checkState(loopStarted, "startLoop must be called before calling endLoop");
-        loopStarted = false;
+        Preconditions.checkState(loopState == LoopState.STARTED, "startLoop must be called before calling endLoop");
+        loopState = LoopState.ENDED;
         loopNode = null;
     }
 
@@ -130,14 +153,23 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     public V next() {
         Preconditions.checkState(hasNext(), "hasNext() must be true before calling next()");
 
-        lastNode = getNextNode();
+        DoublyLinkedList<K, V>.Node nextNode = getAndSetNextNode();
         maybeClearLoopNode();
         canCallRemove = true;
-        return lastNode.getValue();
+        return nextNode.getValue();
     }
 
-    private DoublyLinkedList<K, V>.Node getNextNode() {
-        return lastNode == null ? doublyLinkedList.getHead() : doublyLinkedList.getNextNodeOrHead(lastNode);
+    private DoublyLinkedList<K, V>.Node getAndSetNextNode() {
+        DoublyLinkedList<K, V>.Node nextNode;
+        if (inLoopWithNoLoopStateCheck()) {
+            nextNode = doublyLinkedList.getNextNodeOrHead(loopNode);
+            loopNode = nextNode;
+        } else {
+            nextNode = lastNode == null ? doublyLinkedList.getHead() : doublyLinkedList.getNextNodeOrHead(lastNode);
+            lastNode = nextNode;
+        }
+
+        return nextNode;
     }
 
     private void maybeClearLoopNode() {
@@ -153,7 +185,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         Preconditions.checkState(canCallRemove, "Already called remove once for last call to next");
 
         canCallRemove = false;
-        remove(lastNode.getKey());
+        removeWithoutLoopStateCheck(inLoopWithNoLoopStateCheck() ? loopNode.getKey() : lastNode.getKey());
     }
 
     @Override
@@ -162,6 +194,9 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
                 "doublyLinkedList=" + doublyLinkedList +
                 ", keyToNode=" + keyToNode +
                 ", lastNode=" + lastNode +
+                ", loopNode=" + loopNode +
+                ", loopState=" + loopState +
+                ", canCallRemove=" + canCallRemove +
                 '}';
     }
 }

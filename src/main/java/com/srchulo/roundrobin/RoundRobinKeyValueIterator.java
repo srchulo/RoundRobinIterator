@@ -27,6 +27,7 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      * Adds this key-value pair to the iterator. The key-value pair will be placed after the last value retrieved from
      * {@link #next()}, and thus will be returned the next time {@link #next()} is called. This operation is performed
      * in O(1) constant time. If no values have been added, this value is first.
+     * @throws IllegalStateException if called while in a loop started by {@link #startLoop()}.
      */
     void add(K key, V value);
 
@@ -35,6 +36,7 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      * time. It is safe to call this method while iterating. If this value would have been returned by {@link #next()}
      * on the next call, the value after it will now be returned.
      * @return the value associated with key.
+     * @throws IllegalStateException if called while in a loop started by {@link #startLoop()}.
      */
     V remove(K key);
 
@@ -49,14 +51,23 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
 
     /**
      * Starts a loop where you can do one iteration over each element in the iterator starting from the last
-     * element returned by {@link #next()}. You can check to see if you are in the loop by calling {@link #inLoop()}.
+     * element returned by {@link #next()}. The iteration over this loop does not affect the {@link Iterator}'s position
+     * once the loop ends. You can check to see if you are in the loop by calling {@link #inLoop()}.
      *
      * <pre>
      * <code>
      *     roundRobinKeyValueIterator.startLoop();
      *     while (roundRobinKeyValueIterator.hasNext() && roundRobinKeyValueIterator.inLoop()) {
      *         System.out.println("In loop " + roundRobinKeyValueIterator.next());
+     *
+     *         // if condition is never true, the loop will exit after a full loop when inLoop() returns false.
+     *         if (condition == true) {
+     *             roundRobinKeyValueIterator.endLoop();
+     *         }
      *     }
+     *
+     *     // next value roundRobinKeyValueIterator would've returned before starting the loop.
+     *     System.out.println("Out of loop " + roundRobinKeyValueIterator.next());
      * </code>
      * </pre>
      *

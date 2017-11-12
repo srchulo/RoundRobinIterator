@@ -1,7 +1,6 @@
 package com.srchulo.roundrobin;
 
 import com.google.common.base.Preconditions;
-import javax.annotation.Nullable;
 
 /**
  * A doubly linked list implementation.
@@ -72,11 +71,6 @@ final class DoublyLinkedList<K, V> {
         next.prev = node.next = new Node(key, value, /* prev= */ node, next);
 
         return node.next;
-    }
-
-    @Nullable
-    Node getPreviousNode(Node node) {
-        return node.prev;
     }
 
     Node getPreviousNodeOrTail(Node node) {
