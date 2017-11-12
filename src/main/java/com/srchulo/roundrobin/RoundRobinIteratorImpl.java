@@ -52,6 +52,11 @@ final class RoundRobinIteratorImpl<T> implements RoundRobinIterator<T> {
     }
 
     @Override
+    public boolean hasNextAndInLoop() {
+        return roundRobinKeyValueIterator.hasNextAndInLoop();
+    }
+
+    @Override
     public boolean hasNext() {
         return roundRobinKeyValueIterator.hasNext();
     }

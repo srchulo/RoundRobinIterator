@@ -145,6 +145,11 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     }
 
     @Override
+    public boolean hasNextAndInLoop() {
+        return hasNext() && inLoop();
+    }
+
+    @Override
     public boolean hasNext() {
         return !isEmpty();
     }

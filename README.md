@@ -10,7 +10,7 @@ A Round-Robin Iterator that traverses values in Round-Robin order, and can add a
     <dependency>
         <groupId>com.srchulo.roundrobin</groupId>
         <artifactId>RoundRobinIterator</artifactId>
-        <version>1.2</version>
+        <version>1.3</version>
     </dependency>
 
 ### Sample usage

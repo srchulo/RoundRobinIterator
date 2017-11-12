@@ -46,7 +46,7 @@ public interface RoundRobinIterator<T> extends Iterator<T> {
      * <pre>
      * <code>
      *     roundRobinIterator.startLoop();
-     *     while (roundRobinIterator.hasNext() && roundRobinIterator.inLoop()) {
+     *     while (roundRobinIterator.hasNextAndInLoop()) {
      *         System.out.println("In loop " + roundRobinKeyValueIterator.next());
      *
      *         // if condition is never true, the loop will exit after a full loop when inLoop() returns false.
@@ -86,4 +86,9 @@ public interface RoundRobinIterator<T> extends Iterator<T> {
      * Returns {@code true} if {@link RoundRobinIterator} is empty.
      */
     boolean isEmpty();
+
+    /**
+     * @return {@code true} if both {@link #hasNext()} returns {@code true} and {@link #inLoop()} returns {@code true}.
+     */
+    boolean hasNextAndInLoop();
 }

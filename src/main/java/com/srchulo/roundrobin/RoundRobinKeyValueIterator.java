@@ -57,7 +57,7 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      * <pre>
      * <code>
      *     roundRobinKeyValueIterator.startLoop();
-     *     while (roundRobinKeyValueIterator.hasNext() && roundRobinKeyValueIterator.inLoop()) {
+     *     while (roundRobinKeyValueIterator.hasNextAndInLoop()) {
      *         System.out.println("In loop " + roundRobinKeyValueIterator.next());
      *
      *         // if condition is never true, the loop will exit after a full loop when inLoop() returns false.
@@ -97,4 +97,9 @@ public interface RoundRobinKeyValueIterator<K, V> extends Iterator<V> {
      * Returns {@code true} if {@link RoundRobinKeyValueIterator} is empty.
      */
     boolean isEmpty();
+
+    /**
+     * @return {@code true} if both {@link #hasNext()} returns {@code true} and {@link #inLoop()} returns {@code true}.
+     */
+    boolean hasNextAndInLoop();
 }
