@@ -14,15 +14,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     private final Map<K, DoublyLinkedList<K, V>.Node> keyToNode = new HashMap<>();
 
     @Nullable private DoublyLinkedList<K, V>.Node lastNode;
-    @Nullable private DoublyLinkedList<K, V>.Node loopNode;
-    private LoopState loopState = LoopState.NOT_STARTED;
     private boolean canCallRemove;
-
-    private enum LoopState {
-        NOT_STARTED,
-        STARTED,
-        ENDED,
-    }
 
     RoundRobinKeyValueIteratorImpl() {
         this(ImmutableList.of());
@@ -34,7 +26,6 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Override
     public void add(K key, V value) {
-        Preconditions.checkState(loopState != LoopState.STARTED, "cannot call add while in a loop");
         Preconditions.checkState(
                 !containsKey(key), "key '" + key + "' already exists. Cannot add value '" + value + "'");
 
@@ -45,24 +36,26 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Override
     public V remove(K key) {
-        Preconditions.checkState(loopState != LoopState.STARTED, "cannot call remove(key) while in a loop");
-        return removeWithoutLoopStateCheck(key);
+        return remove(key, /* loopIterator= */ null);
     }
 
-    private V removeWithoutLoopStateCheck(K key) {
+    private V remove(K key, @Nullable LoopIterator loopIterator) {
         checkContainsKey(key);
 
         DoublyLinkedList<K, V>.Node node = keyToNode.remove(key);
         if (size() == 1) {
             lastNode = null;
-            loopNode = null;
         } else {
             maybeUpdateLastNodeForRemoval(node);
-            maybeUpdateLoopNodeForRemoval(node);
+        }
+
+        if (loopIterator != null) {
+            loopIterator.onRemove(node);
         }
 
         doublyLinkedList.remove(node);
         return node.getValue();
+
     }
 
     @Override
@@ -86,42 +79,6 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         }
     }
 
-    private void maybeUpdateLoopNodeForRemoval(DoublyLinkedList<K, V>.Node node) {
-        if (node == loopNode) {
-            loopNode = doublyLinkedList.getPreviousNodeOrTail(loopNode);
-        }
-    }
-
-    @Override
-    public void startLoop() {
-        Preconditions
-                .checkState(
-                        loopState == LoopState.NOT_STARTED || loopState == LoopState.ENDED,
-                        "current loop must be ended by calling endLoop before calling startLoop");
-        loopState = LoopState.STARTED;
-
-        if (isEmpty()) {
-            return;
-        }
-
-        // if lastNode is not set, the loop will never end
-        if (lastNode == null) {
-            lastNode = doublyLinkedList.getTail();
-        }
-        loopNode = lastNode;
-    }
-
-    private boolean inLoop() {
-        return loopNode != null;
-    }
-
-    @Override
-    public void endLoop() {
-        Preconditions.checkState(loopState == LoopState.STARTED, "startLoop must be called before calling endLoop");
-        loopState = LoopState.ENDED;
-        loopNode = null;
-    }
-
     @Override
     public int size() {
         return doublyLinkedList.size();
@@ -134,16 +91,6 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     @Override
     public boolean hasNext() {
-        if (loopState == LoopState.NOT_STARTED) {
-            return !isEmpty();
-        }
-
-        if (loopNode == null) {
-            loopState = LoopState.NOT_STARTED;
-            return false;
-        }
-
-        // this should always be true
         return !isEmpty();
     }
 
@@ -151,31 +98,16 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     public V next() {
         Preconditions.checkState(hasNext(), "hasNext() must be true before calling next()");
 
-        DoublyLinkedList<K, V>.Node nextNode = getAndSetNextNode();
-        maybeClearLoopNode();
         canCallRemove = true;
-        return nextNode.getValue();
+        return getAndSetNextNode().getValue();
     }
 
     private DoublyLinkedList<K, V>.Node getAndSetNextNode() {
-        DoublyLinkedList<K, V>.Node nextNode;
-        if (inLoop()) {
-            nextNode = doublyLinkedList.getNextNodeOrHead(loopNode);
-            loopNode = nextNode;
-        } else {
-            nextNode = lastNode == null ? doublyLinkedList.getHead() : doublyLinkedList.getNextNodeOrHead(lastNode);
-            lastNode = nextNode;
-        }
+        DoublyLinkedList<K, V>.Node nextNode =
+                lastNode == null ? doublyLinkedList.getHead() : doublyLinkedList.getNextNodeOrHead(lastNode);
+        lastNode = nextNode;
 
         return nextNode;
-    }
-
-    private void maybeClearLoopNode() {
-        // We do not call endLoop because we don't want loopStarted to be false. This way the user should be able to
-        // call inLoop one more time.
-        if (lastNode == loopNode) {
-            loopNode = null;
-        }
     }
 
     @Override
@@ -183,7 +115,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         Preconditions.checkState(canCallRemove, "Already called remove once for last call to next");
 
         canCallRemove = false;
-        removeWithoutLoopStateCheck(inLoop() ? loopNode.getKey() : lastNode.getKey());
+        remove(lastNode.getKey());
     }
 
     @Override
@@ -192,14 +124,90 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     }
 
     @Override
+    public IterableIterator<V> loopIterator() {
+        return isEmpty() ? EmptyIterableIterator.INSTANCE : new LoopIterator(/* updateLastNode= */ true);
+    }
+
+    @Override
+    public IterableIterator<V> statelessLoopIterator() {
+        return isEmpty() ? EmptyIterableIterator.INSTANCE : new LoopIterator(/* updateLastNode= */ false);
+    }
+
+    @Override
     public String toString() {
         return "RoundRobinKeyValueIteratorImpl{" +
                 "doublyLinkedList=" + doublyLinkedList +
                 ", keyToNode=" + keyToNode +
                 ", lastNode=" + lastNode +
-                ", loopNode=" + loopNode +
-                ", loopState=" + loopState +
                 ", canCallRemove=" + canCallRemove +
                 '}';
+    }
+
+    private final class LoopIterator implements IterableIterator<V> {
+        private final boolean updateLastNode;
+
+        private DoublyLinkedList<K, V>.Node lastLoopNode;
+        private DoublyLinkedList<K, V>.Node startNode;
+        private boolean canCallRemove;
+        private boolean loopFinished;
+
+        private LoopIterator(boolean updateLastNode) {
+            this.updateLastNode = updateLastNode;
+            lastLoopNode = startNode = lastNode == null ? doublyLinkedList.getTail() : lastNode;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return !loopFinished && !isEmpty();
+        }
+
+        @Override
+        public V next() {
+            Preconditions.checkState(hasNext(), "hasNext() must be true before calling next()");
+
+            lastLoopNode = doublyLinkedList.getNextNodeOrHead(lastLoopNode);
+            if (lastLoopNode == startNode) {
+                loopFinished = true;
+            }
+            if (updateLastNode) {
+                lastNode = lastLoopNode;
+            }
+
+            canCallRemove = true;
+            return lastLoopNode.getValue();
+        }
+
+        @Override
+        public void remove() {
+            Preconditions.checkState(canCallRemove, "Already called remove once for last call to next");
+            canCallRemove = false;
+
+            RoundRobinKeyValueIteratorImpl.this.remove(lastLoopNode.getKey(), /* loopIterator= */ this);
+        }
+
+        private void onRemove(DoublyLinkedList<K, V>.Node nodeToRemove) {
+            if (size() == 1) {
+                lastLoopNode = null;
+                loopFinished = true;
+            } else if (lastLoopNode == nodeToRemove) {
+                lastLoopNode = doublyLinkedList.getPreviousNodeOrTail(lastLoopNode);
+            }
+        }
+
+        @Override
+        public Iterator<V> iterator() {
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return "LoopIterator{" +
+                    "updateLastNode=" + updateLastNode +
+                    ", lastLoopNode=" + lastLoopNode +
+                    ", startNode=" + startNode +
+                    ", canCallRemove=" + canCallRemove +
+                    ", loopFinished=" + loopFinished +
+                    '}';
+        }
     }
 }
