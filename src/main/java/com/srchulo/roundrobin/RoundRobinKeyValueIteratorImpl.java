@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import javafx.util.Pair;
 import javax.annotation.Nullable;
@@ -110,20 +111,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         loopNode = lastNode;
     }
 
-    @Override
-    public boolean inLoop() {
-        Preconditions.checkState(
-                loopState == LoopState.STARTED || loopState == LoopState.ENDED,
-                "must be in a loop or have just ended a loop by calling endLoop to call inLoop");
-        if (!inLoopWithNoLoopStateCheck()) {
-            loopState = LoopState.NOT_STARTED;
-            return false;
-        }
-
-        return true;
-    }
-
-    private boolean inLoopWithNoLoopStateCheck() {
+    private boolean inLoop() {
         return loopNode != null;
     }
 
@@ -145,12 +133,17 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
     }
 
     @Override
-    public boolean hasNextAndInLoop() {
-        return hasNext() && inLoop();
-    }
-
-    @Override
     public boolean hasNext() {
+        if (loopState == LoopState.NOT_STARTED) {
+            return !isEmpty();
+        }
+
+        if (loopNode == null) {
+            loopState = LoopState.NOT_STARTED;
+            return false;
+        }
+
+        // this should always be true
         return !isEmpty();
     }
 
@@ -166,7 +159,7 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
 
     private DoublyLinkedList<K, V>.Node getAndSetNextNode() {
         DoublyLinkedList<K, V>.Node nextNode;
-        if (inLoopWithNoLoopStateCheck()) {
+        if (inLoop()) {
             nextNode = doublyLinkedList.getNextNodeOrHead(loopNode);
             loopNode = nextNode;
         } else {
@@ -190,7 +183,12 @@ final class RoundRobinKeyValueIteratorImpl<K, V> implements RoundRobinKeyValueIt
         Preconditions.checkState(canCallRemove, "Already called remove once for last call to next");
 
         canCallRemove = false;
-        removeWithoutLoopStateCheck(inLoopWithNoLoopStateCheck() ? loopNode.getKey() : lastNode.getKey());
+        removeWithoutLoopStateCheck(inLoop() ? loopNode.getKey() : lastNode.getKey());
+    }
+
+    @Override
+    public Iterator<V> iterator() {
+        return this;
     }
 
     @Override

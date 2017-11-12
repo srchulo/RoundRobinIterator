@@ -3,6 +3,7 @@ package com.srchulo.roundrobin;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
+import java.util.Iterator;
 
 final class RoundRobinIteratorImpl<T> implements RoundRobinIterator<T> {
     private final RoundRobinKeyValueIterator<T, T> roundRobinKeyValueIterator =
@@ -32,11 +33,6 @@ final class RoundRobinIteratorImpl<T> implements RoundRobinIterator<T> {
     }
 
     @Override
-    public boolean inLoop() {
-        return roundRobinKeyValueIterator.inLoop();
-    }
-
-    @Override
     public void endLoop() {
         roundRobinKeyValueIterator.endLoop();
     }
@@ -52,11 +48,6 @@ final class RoundRobinIteratorImpl<T> implements RoundRobinIterator<T> {
     }
 
     @Override
-    public boolean hasNextAndInLoop() {
-        return roundRobinKeyValueIterator.hasNextAndInLoop();
-    }
-
-    @Override
     public boolean hasNext() {
         return roundRobinKeyValueIterator.hasNext();
     }
@@ -69,6 +60,11 @@ final class RoundRobinIteratorImpl<T> implements RoundRobinIterator<T> {
     @Override
     public void remove() {
         roundRobinKeyValueIterator.remove();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        return roundRobinKeyValueIterator.iterator();
     }
 
     @Override
